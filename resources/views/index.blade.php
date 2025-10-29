@@ -67,12 +67,10 @@
         </div>
     </main>
 
-    <custom-footer></custom-footer>
     <script src="{{ asset('js/components/navbar.js') }}"></script>
     <script src="{{ asset('js/components/footer.js') }}"></script>
     <script src="{{ asset('js/script.js') }}"></script>
     <script src="{{ asset('js/components/help.js') }}"></script>
     <script src="{{ asset('js/components/contact.js') }}"></script>
-    <script src="https://huggingface.co/deepsite/deepsite-badge.js"></script>
 </body>
 </html>
