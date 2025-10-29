@@ -131,7 +131,6 @@
         </div>
     </main>
 
-    <custom-footer></custom-footer>
     
     <script src="{{ asset('js/components/navbar.js') }}"></script>
     <script src="{{ asset('js/components/footer.js') }}"></script>
@@ -151,6 +150,5 @@
         }, 5000);
         @endif
     </script>
-    <script src="https://huggingface.co/deepsite/deepsite-badge.js"></script>
 </body>
 </html>
