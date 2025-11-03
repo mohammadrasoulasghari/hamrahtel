@@ -134,7 +134,7 @@ class ProcessFileComparison implements ShouldQueue
 
     /**
      * Load Excel file in chunks to avoid memory exhaustion.
-     * Uses PhpSpreadsheet chunk reading without loading entire file.
+     * Uses ReadFilter to load only one chunk at a time.
      *
      * @param string $filePath
      * @return array
@@ -145,39 +145,49 @@ class ProcessFileComparison implements ShouldQueue
         $chunkSize = config('comparison.chunk_size', 500);
         
         try {
+            // First, get total rows without loading data
             $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
             $reader->setReadDataOnly(true);
-            $reader->setReadEmptyCells(false);
             
+            // Load just to get metadata
             $spreadsheet = $reader->load($filePath);
             $sheet = $spreadsheet->getActiveSheet();
-            $highestRow = $sheet->getHighestRow();
+            $totalRows = $sheet->getHighestRow();
             $highestColumn = $sheet->getHighestColumn();
-            
-            // Process in chunks
-            for ($startRow = 2; $startRow <= $highestRow; $startRow += $chunkSize) {
-                $endRow = min($startRow + $chunkSize - 1, $highestRow);
-                
-                $chunkData = $sheet->rangeToArray(
-                    'A' . $startRow . ':' . $highestColumn . $endRow,
-                    null,
-                    true,
-                    true,
-                    false
-                );
-                
-                foreach ($chunkData as $row) {
-                    $data[] = $row;
-                }
-                
-                // Free memory periodically
-                if (count($data) % 1000 === 0) {
-                    gc_collect_cycles();
-                }
-            }
-            
             $spreadsheet->disconnectWorksheets();
             unset($spreadsheet);
+            
+            // Now load in chunks using filter
+            $chunkFilter = new \App\Services\ChunkReadFilter();
+            
+            for ($startRow = 2; $startRow <= $totalRows; $startRow += $chunkSize) {
+                // Create new reader for each chunk
+                $chunkReader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
+                $chunkReader->setReadDataOnly(true);
+                $chunkReader->setReadEmptyCells(false);
+                
+                // Set filter to read only this chunk
+                $chunkFilter->setRows($startRow, $chunkSize);
+                $chunkReader->setReadFilter($chunkFilter);
+                
+                $chunkSpreadsheet = $chunkReader->load($filePath);
+                $chunkSheet = $chunkSpreadsheet->getActiveSheet();
+                
+                // Get data from this chunk
+                $highestRowInChunk = $chunkSheet->getHighestRow();
+                for ($row = $startRow; $row <= $highestRowInChunk; $row++) {
+                    $rowData = $chunkSheet->rangeToArray('A' . $row . ':' . $highestColumn . $row);
+                    if (!empty($rowData[0])) {
+                        $data[] = $rowData[0];
+                    }
+                }
+                
+                $chunkSpreadsheet->disconnectWorksheets();
+                unset($chunkSpreadsheet, $chunkReader);
+                gc_collect_cycles();
+                
+                Log::info("Loaded chunk: rows {$startRow} to " . min($startRow + $chunkSize - 1, $totalRows));
+            }
             
         } catch (\Exception $e) {
             Log::error('Error loading file in chunks: ' . $e->getMessage());

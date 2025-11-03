@@ -44,7 +44,7 @@ class ColumnDetectionService
     /**
      * Extract column names from the file header.
      * Handles numeric column names (0, 1, 2...) by using first row as headers.
-     * Reads only first row to avoid memory exhaustion.
+     * Uses ReadFilter to read only first row without loading entire file.
      *
      * @param string $filePath
      * @return array
@@ -52,11 +52,14 @@ class ColumnDetectionService
     protected function extractColumnNames(string $filePath): array
     {
         try {
-            // Read only first sheet, first row
             $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
             $reader->setReadDataOnly(true);
             
-            // Load only first row
+            // Create filter to read only first row
+            $chunkFilter = new ChunkReadFilter();
+            $chunkFilter->setRows(1, 1);
+            $reader->setReadFilter($chunkFilter);
+            
             $spreadsheet = $reader->load($filePath);
             $sheet = $spreadsheet->getActiveSheet();
             $firstRow = $sheet->rangeToArray('A1:' . $sheet->getHighestColumn() . '1')[0];
@@ -68,24 +71,46 @@ class ColumnDetectionService
                 return [];
             }
             
-            // Check if headers are numeric (0, 1, 2...) which means no header row
-            $hasNumericHeaders = false;
-            if (isset($firstRow[0]) && is_numeric($firstRow[0])) {
-                $hasNumericHeaders = true;
+            Log::info('First row raw data: ' . json_encode($firstRow));
+            
+            // Check if headers look like actual text (not empty, not just numbers)
+            $hasRealHeaders = false;
+            $nonEmptyCount = 0;
+            $textHeaderCount = 0;
+            
+            foreach ($firstRow as $cell) {
+                if ($cell !== null && $cell !== '') {
+                    $nonEmptyCount++;
+                    // Check if it's a meaningful text header (not just a number)
+                    if (!is_numeric($cell) || mb_strlen(trim((string)$cell)) > 3) {
+                        $textHeaderCount++;
+                    }
+                }
             }
             
-            // If we have actual text headers, use them
-            if (!$hasNumericHeaders) {
+            // If we have at least 50% non-empty cells and at least 50% text headers, use them
+            $hasRealHeaders = ($nonEmptyCount > count($firstRow) / 2) && ($textHeaderCount > $nonEmptyCount / 2);
+            
+            Log::info("Header detection: nonEmpty={$nonEmptyCount}, textHeaders={$textHeaderCount}, hasReal={$hasRealHeaders}");
+            
+            if ($hasRealHeaders) {
                 $columnNames = [];
                 foreach ($firstRow as $value) {
-                    $cleanName = $this->cleanColumnName($value);
-                    $columnNames[] = $cleanName ?: 'ستون_' . (count($columnNames) + 1);
+                    if ($value === null || $value === '') {
+                        $columnNames[] = 'ستون_' . (count($columnNames) + 1);
+                    } else {
+                        $cleanName = $this->cleanColumnName($value);
+                        $columnNames[] = $cleanName ?: 'ستون_' . (count($columnNames) + 1);
+                    }
                 }
+                Log::info('Using real headers: ' . json_encode($columnNames));
                 return $columnNames;
             }
             
             // Otherwise use generic column names
-            return array_map(fn($i) => 'ستون_' . ($i + 1), array_keys($firstRow));
+            $genericNames = array_map(fn($i) => 'ستون_' . ($i + 1), array_keys($firstRow));
+            Log::info('Using generic names: ' . json_encode($genericNames));
+            return $genericNames;
             
         } catch (\Exception $e) {
             Log::error('Error extracting column names: ' . $e->getMessage());
@@ -118,7 +143,7 @@ class ColumnDetectionService
 
     /**
      * Get sample rows from the file (lightweight read).
-     * Reads only limited rows to avoid loading entire file.
+     * Uses ReadFilter to read only limited rows without loading entire file.
      *
      * @param string $filePath
      * @param int $limit Number of rows to return
@@ -130,18 +155,24 @@ class ColumnDetectionService
             $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
             $reader->setReadDataOnly(true);
             
+            // Create filter to read only sample rows (skip header)
+            $chunkFilter = new ChunkReadFilter();
+            $chunkFilter->setRows(2, $limit); // Start from row 2, read $limit rows
+            $reader->setReadFilter($chunkFilter);
+            
             $spreadsheet = $reader->load($filePath);
             $sheet = $spreadsheet->getActiveSheet();
             
-            // Read limited rows (skip header row)
+            // Get all loaded rows
             $rows = [];
-            $maxRow = min($sheet->getHighestRow(), $limit + 1);
+            $highestRow = $sheet->getHighestRow();
+            $highestColumn = $sheet->getHighestColumn();
             
-            for ($row = 2; $row <= $maxRow; $row++) {
-                $rowData = $sheet->rangeToArray(
-                    'A' . $row . ':' . $sheet->getHighestColumn() . $row
-                )[0];
-                $rows[] = $rowData;
+            for ($row = 2; $row <= $highestRow; $row++) {
+                $rowData = $sheet->rangeToArray('A' . $row . ':' . $highestColumn . $row);
+                if (!empty($rowData[0])) {
+                    $rows[] = $rowData[0];
+                }
             }
             
             $spreadsheet->disconnectWorksheets();
@@ -156,7 +187,7 @@ class ColumnDetectionService
 
     /**
      * Estimate row count without loading entire file.
-     * Uses sheet metadata to get count efficiently.
+     * Uses ReadFilter to read only first column for counting.
      *
      * @param string $filePath
      * @return int
@@ -167,6 +198,7 @@ class ColumnDetectionService
             $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
             $reader->setReadDataOnly(true);
             
+            // Don't use filter here - we need metadata only
             $spreadsheet = $reader->load($filePath);
             $sheet = $spreadsheet->getActiveSheet();
             
