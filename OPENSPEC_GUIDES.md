@@ -227,22 +227,22 @@ hamrahtel/
         ↓
         "What am I building?"
         Review: Why, What Changes, Impact
-     
+
      2. Read design.md (if exists)
         ↓
         "What are the technical decisions?"
         Review: Architecture, trade-offs
-     
+
      3. Read tasks.md
         ↓
         "What's the checklist?"
         See: [ ] Task 1, [ ] Task 2, ...
-     
-     
+
+
      DURING CODING
      ─────────────────────────────────
      For each task:
-     
+
      ┌─ Task 1.1
      │  └─ Write code
      │     └─ Mark: [x] Task 1.1
@@ -254,21 +254,21 @@ hamrahtel/
      └─ Task 2.1
         └─ Write code
            └─ Mark: [x] Task 2.1
-     
-     
+
+
      AFTER CODING
      ─────────────────────────────────
      1. Confirm all tasks are [x]
-     
+
      2. Run tests
-     
+
      3. Validate against requirements
         "Does code implement all requirements?"
-     
+
      4. Code review
-     
+
      5. Merge & deploy
-     
+
      6. Then → STAGE 3: Archive
 
 ```

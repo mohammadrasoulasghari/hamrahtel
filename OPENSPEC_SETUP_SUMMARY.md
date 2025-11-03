@@ -5,51 +5,61 @@
 I've successfully set up **OpenSpec** specification-driven development for your **Hamrahtel** project. Here's what was completed:
 
 ### 1. ✅ Project Context (`openspec/project.md`)
+
 **Populated with comprehensive project information:**
-- **Purpose**: Intelligent file comparison system for Persian-speaking users
-- **Tech Stack**: Laravel 11, PHP 8.3, Tailwind CSS, Vite, OpenRouter API
-- **Conventions**: Code style, architecture patterns, testing, git workflow
-- **Domain**: File comparison, tabular data, AI analysis, Persian (RTL) UI
-- **Constraints**: File size limits, API rate limits, data privacy, accuracy disclaimers
-- **External Dependencies**: OpenRouter API, maatwebsite/excel, Laravel framework
+
+-   **Purpose**: Intelligent file comparison system for Persian-speaking users
+-   **Tech Stack**: Laravel 11, PHP 8.3, Tailwind CSS, Vite, OpenRouter API
+-   **Conventions**: Code style, architecture patterns, testing, git workflow
+-   **Domain**: File comparison, tabular data, AI analysis, Persian (RTL) UI
+-   **Constraints**: File size limits, API rate limits, data privacy, accuracy disclaimers
+-   **External Dependencies**: OpenRouter API, maatwebsite/excel, Laravel framework
 
 ### 2. ✅ Workflow Guide (`OPENSPEC_WORKFLOW.md`)
+
 **Created comprehensive guide explaining:**
-- 🎯 Three-stage workflow (Creating → Implementing → Archiving)
-- 📋 How to create change proposals with examples
-- 🚀 How to implement changes step-by-step
-- 📦 How to archive completed changes
-- ✅ When to create proposals vs. fix directly
-- 🔍 Spec format rules and common pitfalls
-- 📞 Getting help and troubleshooting
+
+-   🎯 Three-stage workflow (Creating → Implementing → Archiving)
+-   📋 How to create change proposals with examples
+-   🚀 How to implement changes step-by-step
+-   📦 How to archive completed changes
+-   ✅ When to create proposals vs. fix directly
+-   🔍 Spec format rules and common pitfalls
+-   📞 Getting help and troubleshooting
 
 ### 3. ✅ Current Specifications (`openspec/specs/`)
+
 **Documented existing capabilities:**
 
 #### a) **File Upload** (`openspec/specs/file-upload/spec.md`)
-- Excel/CSV file upload acceptance
-- File parsing to JSON format
-- File persistence and storage
+
+-   Excel/CSV file upload acceptance
+-   File parsing to JSON format
+-   File persistence and storage
 
 #### b) **File Comparison** (`openspec/specs/file-comparison/spec.md`)
-- Two-file comparison workflow
-- Comparison result storage
-- Result retrieval and history
+
+-   Two-file comparison workflow
+-   Comparison result storage
+-   Result retrieval and history
 
 #### c) **AI Integration** (`openspec/specs/ai-integration/spec.md`)
-- OpenRouter API communication
-- Comparison prompt generation
-- AI model configuration
-- HTML report generation in Persian
-- Error logging and monitoring
+
+-   OpenRouter API communication
+-   Comparison prompt generation
+-   AI model configuration
+-   HTML report generation in Persian
+-   Error logging and monitoring
 
 ### 4. ✅ Directory Structure (`openspec/README.md`)
+
 **Created navigational guide with:**
-- Directory structure visualization
-- Getting started steps
-- Change proposal creation walkthrough
-- Common commands reference
-- Key principles and best practices
+
+-   Directory structure visualization
+-   Getting started steps
+-   Change proposal creation walkthrough
+-   Common commands reference
+-   Key principles and best practices
 
 ---
 
@@ -171,14 +181,14 @@ openspec archive add-file-validation --yes
 
 ## 🎓 Key Concepts
 
-| Term | Meaning |
-|------|---------|
-| **Spec** | Describes current system state (requirements + scenarios) |
-| **Change** | Proposal for what should change (why + what + impact) |
-| **Requirement** | A system capability written as "SHALL" statement |
-| **Scenario** | Concrete example of when/then a requirement is used |
-| **Delta** | Changes to a spec (ADDED/MODIFIED/REMOVED sections) |
-| **Change ID** | Unique identifier for a proposal (kebab-case, verb-led) |
+| Term            | Meaning                                                   |
+| --------------- | --------------------------------------------------------- |
+| **Spec**        | Describes current system state (requirements + scenarios) |
+| **Change**      | Proposal for what should change (why + what + impact)     |
+| **Requirement** | A system capability written as "SHALL" statement          |
+| **Scenario**    | Concrete example of when/then a requirement is used       |
+| **Delta**       | Changes to a spec (ADDED/MODIFIED/REMOVED sections)       |
+| **Change ID**   | Unique identifier for a proposal (kebab-case, verb-led)   |
 
 ---
 
@@ -188,62 +198,69 @@ Every requirement MUST have scenarios. Here's the correct format:
 
 ```markdown
 ### Requirement: User Login
+
 The system SHALL authenticate users with email and password.
 
 #### Scenario: Valid credentials
-- **WHEN** user enters correct email and password
-- **THEN** system returns JWT token
-- **AND** user is logged in
+
+-   **WHEN** user enters correct email and password
+-   **THEN** system returns JWT token
+-   **AND** user is logged in
 
 #### Scenario: Invalid credentials
-- **WHEN** user enters incorrect password
-- **THEN** system returns "Invalid credentials" error
+
+-   **WHEN** user enters incorrect password
+-   **THEN** system returns "Invalid credentials" error
 ```
 
 **Critical rules:**
-- ✅ Use `#### Scenario:` (exactly 4 hashtags)
-- ✅ Use **WHEN**, **THEN**, **AND** (bold)
-- ❌ Don't use `- Scenario:` or `### Scenario:` (wrong)
-- ❌ Every requirement MUST have ≥1 scenario
+
+-   ✅ Use `#### Scenario:` (exactly 4 hashtags)
+-   ✅ Use **WHEN**, **THEN**, **AND** (bold)
+-   ❌ Don't use `- Scenario:` or `### Scenario:` (wrong)
+-   ❌ Every requirement MUST have ≥1 scenario
 
 ---
 
 ## 🔗 Quick Links
 
-| Document | Purpose |
-|----------|---------|
-| `/openspec/project.md` | Project context and conventions |
-| `/OPENSPEC_WORKFLOW.md` | Step-by-step workflow guide |
-| `/openspec/README.md` | Directory structure guide |
-| `/openspec/specs/file-upload/spec.md` | Current: File upload capability |
-| `/openspec/specs/file-comparison/spec.md` | Current: Comparison workflow |
-| `/openspec/specs/ai-integration/spec.md` | Current: AI integration |
-| `/openspec/AGENTS.md` | AI assistant instructions (reference) |
+| Document                                  | Purpose                               |
+| ----------------------------------------- | ------------------------------------- |
+| `/openspec/project.md`                    | Project context and conventions       |
+| `/OPENSPEC_WORKFLOW.md`                   | Step-by-step workflow guide           |
+| `/openspec/README.md`                     | Directory structure guide             |
+| `/openspec/specs/file-upload/spec.md`     | Current: File upload capability       |
+| `/openspec/specs/file-comparison/spec.md` | Current: Comparison workflow          |
+| `/openspec/specs/ai-integration/spec.md`  | Current: AI integration               |
+| `/openspec/AGENTS.md`                     | AI assistant instructions (reference) |
 
 ---
 
 ## 💡 When Do You Need a Proposal?
 
 ### ✅ CREATE PROPOSAL for:
-- Adding new features
-- Making breaking changes (API, schema)
-- Changing architecture or patterns
-- Performance optimizations that change behavior
-- Security pattern updates
-- Anything unclear (safer to propose first)
+
+-   Adding new features
+-   Making breaking changes (API, schema)
+-   Changing architecture or patterns
+-   Performance optimizations that change behavior
+-   Security pattern updates
+-   Anything unclear (safer to propose first)
 
 ### ❌ SKIP PROPOSAL for:
-- Bug fixes (restoring intended behavior)
-- Typos, formatting, comments
-- Non-breaking dependency updates
-- Configuration changes
-- Tests for existing behavior
+
+-   Bug fixes (restoring intended behavior)
+-   Typos, formatting, comments
+-   Non-breaking dependency updates
+-   Configuration changes
+-   Tests for existing behavior
 
 ---
 
 ## 🎯 Your Next Steps
 
 ### Option 1: Understand the Current System
+
 ```bash
 cd /home/mohammadrasoul/hamrahtel
 openspec list --specs
@@ -251,12 +268,14 @@ openspec list --specs
 ```
 
 ### Option 2: Plan a New Feature
+
 Follow `/OPENSPEC_WORKFLOW.md` to create your first change proposal.
 
 ### Option 3: Get Help
-- **How to structure a proposal?** → `/OPENSPEC_WORKFLOW.md`
-- **Project conventions?** → `/openspec/project.md`
-- **Directory structure?** → `/openspec/README.md`
+
+-   **How to structure a proposal?** → `/OPENSPEC_WORKFLOW.md`
+-   **Project conventions?** → `/openspec/project.md`
+-   **Directory structure?** → `/openspec/README.md`
 
 ---
 
@@ -273,9 +292,10 @@ Follow `/OPENSPEC_WORKFLOW.md` to create your first change proposal.
 
 ## 🎉 Summary
 
-Your OpenSpec setup is **complete** and ready to use! 
+Your OpenSpec setup is **complete** and ready to use!
 
 **What you now have:**
+
 1. ✅ Project context with complete tech stack and conventions
 2. ✅ Comprehensive workflow guide for creating and implementing changes
 3. ✅ Three documented specifications for existing capabilities
@@ -283,8 +303,9 @@ Your OpenSpec setup is **complete** and ready to use!
 5. ✅ All tools and guidance needed to work with GitHub Copilot on this project
 
 **Next action:**
-- Read `/openspec/project.md` to understand your project
-- Read `/OPENSPEC_WORKFLOW.md` to learn the workflow
-- When ready to add features, create a proposal following the three-stage workflow
+
+-   Read `/openspec/project.md` to understand your project
+-   Read `/OPENSPEC_WORKFLOW.md` to learn the workflow
+-   When ready to add features, create a proposal following the three-stage workflow
 
 Happy building! 🚀
