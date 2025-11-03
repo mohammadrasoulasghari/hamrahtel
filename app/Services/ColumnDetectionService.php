@@ -44,7 +44,7 @@ class ColumnDetectionService
     /**
      * Extract column names from the file header.
      * Handles numeric column names (0, 1, 2...) by using first row as headers.
-     * Uses lazy loading to avoid memory exhaustion.
+     * Uses chunk reading to avoid memory exhaustion.
      *
      * @param string $filePath
      * @return array
@@ -52,11 +52,12 @@ class ColumnDetectionService
     protected function extractColumnNames(string $filePath): array
     {
         try {
-            // Use lazy loading - only reads first row
             $firstRow = null;
             
-            Excel::toCollection(null, $filePath)->first()->take(1)->each(function ($row) use (&$firstRow) {
-                $firstRow = $row;
+            // Read only first chunk (1 row) using callback to avoid loading entire file
+            Excel::chunk($filePath, 1, function($rows) use (&$firstRow) {
+                $firstRow = $rows->first();
+                return false; // Stop after first chunk
             });
             
             if (!$firstRow) {
@@ -127,15 +128,23 @@ class ColumnDetectionService
     public function getSampleRows(string $filePath, int $limit = 5): array
     {
         $rows = [];
-        $count = 0;
+        $collected = 0;
         
-        Excel::toCollection(null, $filePath)->first()->skip(1)->take($limit)->each(function ($row) use (&$rows, &$count, $limit) {
-            if ($count >= $limit) {
-                return false; // Stop iteration
+        // Read in chunks, skip header (first row)
+        Excel::chunk($filePath, 100, function($chunkRows) use (&$rows, &$collected, $limit) {
+            foreach ($chunkRows as $index => $row) {
+                // Skip first row (header) in first chunk
+                if ($collected === 0 && $index === 0) {
+                    continue;
+                }
+                
+                if ($collected >= $limit) {
+                    return false; // Stop reading
+                }
+                
+                $rows[] = is_array($row) ? $row : $row->toArray();
+                $collected++;
             }
-            
-            $rows[] = is_array($row) ? $row : $row->toArray();
-            $count++;
         });
         
         return $rows;
@@ -152,11 +161,12 @@ class ColumnDetectionService
     {
         $count = 0;
         
-        Excel::toCollection(null, $filePath)->first()->skip(1)->each(function () use (&$count) {
-            $count++;
+        Excel::chunk($filePath, 1000, function($rows) use (&$count) {
+            $count += $rows->count();
         });
         
-        return $count;
+        // Subtract 1 for header row
+        return max(0, $count - 1);
     }
 
     /**

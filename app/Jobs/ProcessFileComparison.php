@@ -134,6 +134,7 @@ class ProcessFileComparison implements ShouldQueue
 
     /**
      * Load Excel file in chunks to avoid memory exhaustion.
+     * Uses true chunked reading without loading entire file.
      *
      * @param string $filePath
      * @return array
@@ -142,10 +143,21 @@ class ProcessFileComparison implements ShouldQueue
     {
         $data = [];
         $chunkSize = config('comparison.chunk_size', 500);
+        $isFirstChunk = true;
         
-        Excel::toCollection(null, $filePath)->first()->skip(1)->chunk($chunkSize)->each(function ($chunk) use (&$data) {
-            foreach ($chunk as $row) {
+        Excel::chunk($filePath, $chunkSize, function($rows) use (&$data, &$isFirstChunk) {
+            foreach ($rows as $index => $row) {
+                // Skip header row (first row of first chunk)
+                if ($isFirstChunk && $index === 0) {
+                    $isFirstChunk = false;
+                    continue;
+                }
+                
                 $data[] = is_array($row) ? $row : $row->toArray();
+            }
+            
+            if ($isFirstChunk) {
+                $isFirstChunk = false;
             }
         });
         

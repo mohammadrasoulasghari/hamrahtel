@@ -315,6 +315,7 @@ class ComparisonController extends Controller
 
     /**
      * Load only sample rows from file to avoid memory exhaustion.
+     * Uses chunked reading to avoid loading entire file.
      *
      * @param string $filePath
      * @param int $limit
@@ -324,58 +325,68 @@ class ComparisonController extends Controller
     {
         $rows = [];
         $headers = null;
-        $count = 0;
+        $collected = 0;
         
-        Excel::toCollection(null, $filePath)->first()->each(function ($row) use (&$rows, &$headers, &$count, $limit) {
-            if ($count >= $limit + 1) {
-                return false; // Stop iteration
-            }
-            
-            $rowArray = is_array($row) ? $row : $row->toArray();
-            
-            // First row is headers
-            if ($count === 0) {
-                $headers = array_values($rowArray);
-            } else {
+        Excel::chunk($filePath, 100, function($chunkRows) use (&$rows, &$headers, &$collected, $limit) {
+            foreach ($chunkRows as $index => $row) {
+                $rowArray = is_array($row) ? $row : $row->toArray();
+                
+                // First row overall is headers
+                if ($headers === null) {
+                    $headers = array_values($rowArray);
+                    continue;
+                }
+                
+                if ($collected >= $limit) {
+                    return false; // Stop reading
+                }
+                
                 // Map row to headers
                 $mappedRow = [];
-                foreach ($headers as $index => $header) {
-                    $mappedRow[$header] = $rowArray[$index] ?? null;
+                foreach ($headers as $idx => $header) {
+                    $mappedRow[$header] = $rowArray[$idx] ?? null;
                 }
                 $rows[] = $mappedRow;
+                $collected++;
             }
-            
-            $count++;
         });
         
         return $rows;
     }
 
+    /**
+     * Convert Excel file to JSON array (DEPRECATED - use Job for large files).
+     * Uses chunked reading for memory safety.
+     * 
+     * @deprecated Use ProcessFileComparison job instead for production
+     */
     private function convertToJson($filePath)
     {
         try {
-            $collection = Excel::toCollection(null, $filePath);
+            $data = [];
+            $headers = null;
             
-            // تبدیل Collection به آرایه ساده
-            $data = $collection->first()->toArray();
-            
-            // استفاده از سطر اول به عنوان هدر
-            $headers = array_shift($data);
-            
-            // ساخت آرایه‌ای با کلیدهای نامگذاری شده
-            $result = [];
-            foreach ($data as $row) {
-                $rowData = [];
-                foreach ($headers as $index => $header) {
-                    $rowData[$header] = $row[$index] ?? null;
+            Excel::chunk($filePath, 500, function($rows) use (&$data, &$headers) {
+                foreach ($rows as $row) {
+                    $rowArray = is_array($row) ? $row : $row->toArray();
+                    
+                    if ($headers === null) {
+                        $headers = $rowArray;
+                        continue;
+                    }
+                    
+                    $rowData = [];
+                    foreach ($headers as $index => $header) {
+                        $rowData[$header] = $rowArray[$index] ?? null;
+                    }
+                    $data[] = $rowData;
                 }
-                $result[] = $rowData;
-            }
+            });
             
-            return $result;
+            return $data;
             
         } catch (\Exception $e) {
-            Log::error('خطا در تبدیل فایل به JSON: ' . $e->getMessage());
+            Log::error('Error converting file to JSON: ' . $e->getMessage());
             throw $e;
         }
     }
