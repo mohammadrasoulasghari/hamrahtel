@@ -115,8 +115,8 @@ class ComparisonController extends Controller
     {
         try {
             $request->validate([
-                'file1' => 'required|file|mimes:xlsx,xls,csv|max:512000',
-                'file2' => 'required|file|mimes:xlsx,xls,csv|max:512000',
+                'file1' => 'required|file|mimes:xlsx,xls,csv|max:51200',
+                'file2' => 'required|file|mimes:xlsx,xls,csv|max:51200',
             ]);
 
             // Upload files temporarily
@@ -179,6 +179,7 @@ class ComparisonController extends Controller
 
     /**
      * Validate column matching and show preview of matched rows.
+     * Uses lightweight sampling to avoid memory exhaustion.
      */
     public function validateMatching(Request $request)
     {
@@ -191,11 +192,11 @@ class ComparisonController extends Controller
 
             $comparison = Comparison::findOrFail($request->comparison_id);
 
-            // Load data from files
-            $file1Data = $this->convertToJson(storage_path('app/public/' . $comparison->file1_path));
-            $file2Data = $this->convertToJson(storage_path('app/public/' . $comparison->file2_path));
+            // Load only first 100 rows for preview (to avoid memory exhaustion)
+            $file1Data = $this->loadSampleRows(storage_path('app/public/' . $comparison->file1_path), 100);
+            $file2Data = $this->loadSampleRows(storage_path('app/public/' . $comparison->file2_path), 100);
 
-            // Perform row joining
+            // Perform row joining on sample data
             if ($request->join_strategy === 'compare_all') {
                 $joinResult = $this->rowJoiningService->compareAll($file1Data, $file2Data);
             } else {
@@ -216,6 +217,7 @@ class ComparisonController extends Controller
                 'unmatched_file1_count' => count($joinResult['unmatched_file1']),
                 'unmatched_file2_count' => count($joinResult['unmatched_file2']),
                 'sample_matched' => $sampleMatched,
+                'note' => 'این آمار بر اساس 100 ردیف اول است. نتیجه نهایی ممکن است متفاوت باشد.',
             ]);
 
         } catch (\Exception $e) {
@@ -230,6 +232,7 @@ class ComparisonController extends Controller
 
     /**
      * Start full comparison with selected configuration.
+     * Dispatches job to queue for async processing.
      */
     public function startComparison(Request $request)
     {
@@ -242,73 +245,28 @@ class ComparisonController extends Controller
             ]);
 
             $comparison = Comparison::findOrFail($request->comparison_id);
+            
+            // Update status to processing
             $comparison->update([
                 'selected_key_columns' => $request->key_columns,
                 'row_join_strategy' => $request->join_strategy,
                 'description' => $request->description,
                 'status' => 'processing',
-                'processing_started_at' => now(),
             ]);
 
-            // Load data
-            $file1Data = $this->convertToJson(storage_path('app/public/' . $comparison->file1_path));
-            $file2Data = $this->convertToJson(storage_path('app/public/' . $comparison->file2_path));
-
-            // Phase 2: Row Joining
-            if ($request->join_strategy === 'compare_all') {
-                $joinResult = $this->rowJoiningService->compareAll($file1Data, $file2Data);
-            } else {
-                $joinResult = $this->rowJoiningService->joinByKeyColumns(
-                    $file1Data,
-                    $file2Data,
-                    $request->key_columns ?? [],
-                    $request->join_strategy
-                );
-            }
-
-            // Phase 3: PHP Structural Analysis
-            $schema1 = ['columns' => $comparison->file1_columns, 'row_count' => count($file1Data)];
-            $schema2 = ['columns' => $comparison->file2_columns, 'row_count' => count($file2Data)];
-            
-            $analysis = $this->comparisonAnalyzer->analyzeStructure(
-                $schema1,
-                $schema2,
-                $joinResult['matched'],
-                $joinResult['unmatched_file1'],
-                $joinResult['unmatched_file2']
+            // Dispatch job to queue for async processing
+            \App\Jobs\ProcessFileComparison::dispatch(
+                $comparison->id,
+                $request->key_columns ?? [],
+                $request->join_strategy,
+                $request->description
             );
-
-            $structuralReport = $this->comparisonAnalyzer->generateStructuralReport($analysis);
-
-            // Phase 4: AI Semantic Analysis (if enabled)
-            $aiResult = null;
-            if (config('comparison.enable_ai_analysis')) {
-                $aiResult = $this->openRouterService->compareFiles(
-                    $file1Data,
-                    $file2Data,
-                    $request->description ?? 'مقایسه فایل‌های اکسل',
-                    $structuralReport
-                );
-            }
-
-            // Update comparison with results
-            $comparison->update([
-                'matched_count' => count($joinResult['matched']),
-                'unmatched_file1_count' => count($joinResult['unmatched_file1']),
-                'unmatched_file2_count' => count($joinResult['unmatched_file2']),
-                'php_analysis_result' => $structuralReport,
-                'ai_result' => $aiResult,
-                'status' => 'completed',
-                'processing_completed_at' => now(),
-                'file1_json' => json_encode($file1Data),
-                'file2_json' => json_encode($file2Data),
-            ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'مقایسه با موفقیت انجام شد',
+                'message' => 'پردازش شروع شد. لطفاً صبر کنید...',
                 'comparison_id' => $comparison->id,
-                'redirect_url' => route('comparison.result', $comparison->id),
+                'status' => 'processing',
             ]);
 
         } catch (\Exception $e) {
@@ -320,9 +278,77 @@ class ComparisonController extends Controller
             
             return response()->json([
                 'success' => false,
-                'message' => 'خطا در پردازش مقایسه: ' . $e->getMessage(),
+                'message' => 'خطا در شروع پردازش: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Check processing status of a comparison job.
+     */
+    public function checkStatus($id)
+    {
+        try {
+            $comparison = Comparison::findOrFail($id);
+            
+            return response()->json([
+                'success' => true,
+                'status' => $comparison->status,
+                'matched_count' => $comparison->matched_count,
+                'unmatched_file1_count' => $comparison->unmatched_file1_count,
+                'unmatched_file2_count' => $comparison->unmatched_file2_count,
+                'processing_started_at' => $comparison->processing_started_at?->format('Y-m-d H:i:s'),
+                'processing_completed_at' => $comparison->processing_completed_at?->format('Y-m-d H:i:s'),
+                'redirect_url' => $comparison->status === 'completed' 
+                    ? route('comparison.result', $comparison->id) 
+                    : null,
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'خطا در بررسی وضعیت: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+    /**
+     * Load only sample rows from file to avoid memory exhaustion.
+     *
+     * @param string $filePath
+     * @param int $limit
+     * @return array
+     */
+    private function loadSampleRows(string $filePath, int $limit = 100): array
+    {
+        $rows = [];
+        $headers = null;
+        $count = 0;
+        
+        Excel::toCollection(null, $filePath)->first()->each(function ($row) use (&$rows, &$headers, &$count, $limit) {
+            if ($count >= $limit + 1) {
+                return false; // Stop iteration
+            }
+            
+            $rowArray = is_array($row) ? $row : $row->toArray();
+            
+            // First row is headers
+            if ($count === 0) {
+                $headers = array_values($rowArray);
+            } else {
+                // Map row to headers
+                $mappedRow = [];
+                foreach ($headers as $index => $header) {
+                    $mappedRow[$header] = $rowArray[$index] ?? null;
+                }
+                $rows[] = $mappedRow;
+            }
+            
+            $count++;
+        });
+        
+        return $rows;
     }
 
     private function convertToJson($filePath)

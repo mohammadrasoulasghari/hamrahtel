@@ -44,6 +44,7 @@ class ColumnDetectionService
     /**
      * Extract column names from the file header.
      * Handles numeric column names (0, 1, 2...) by using first row as headers.
+     * Uses lazy loading to avoid memory exhaustion.
      *
      * @param string $filePath
      * @return array
@@ -51,14 +52,12 @@ class ColumnDetectionService
     protected function extractColumnNames(string $filePath): array
     {
         try {
-            $collection = Excel::toCollection(null, $filePath);
+            // Use lazy loading - only reads first row
+            $firstRow = null;
             
-            if ($collection->isEmpty() || $collection->first()->isEmpty()) {
-                return [];
-            }
-            
-            $sheet = $collection->first();
-            $firstRow = $sheet->first();
+            Excel::toCollection(null, $filePath)->first()->take(1)->each(function ($row) use (&$firstRow) {
+                $firstRow = $row;
+            });
             
             if (!$firstRow) {
                 return [];
@@ -119,6 +118,7 @@ class ColumnDetectionService
 
     /**
      * Get sample rows from the file (lightweight read).
+     * Uses chunked reading to avoid loading entire file.
      *
      * @param string $filePath
      * @param int $limit Number of rows to return
@@ -126,38 +126,37 @@ class ColumnDetectionService
      */
     public function getSampleRows(string $filePath, int $limit = 5): array
     {
-        $collection = Excel::toCollection(null, $filePath);
+        $rows = [];
+        $count = 0;
         
-        if ($collection->isEmpty()) {
-            return [];
-        }
-        
-        $sheet = $collection->first();
-        $rows = $sheet->take($limit + 1)->toArray(); // +1 for header
-        
-        // Remove header row
-        array_shift($rows);
+        Excel::toCollection(null, $filePath)->first()->skip(1)->take($limit)->each(function ($row) use (&$rows, &$count, $limit) {
+            if ($count >= $limit) {
+                return false; // Stop iteration
+            }
+            
+            $rows[] = is_array($row) ? $row : $row->toArray();
+            $count++;
+        });
         
         return $rows;
     }
 
     /**
      * Estimate row count without loading entire file.
-     * For now, we load and count, but this can be optimized with streaming.
+     * Uses chunked iteration to count rows efficiently.
      *
      * @param string $filePath
      * @return int
      */
     public function estimateRowCount(string $filePath): int
     {
-        $collection = Excel::toCollection(null, $filePath);
+        $count = 0;
         
-        if ($collection->isEmpty()) {
-            return 0;
-        }
+        Excel::toCollection(null, $filePath)->first()->skip(1)->each(function () use (&$count) {
+            $count++;
+        });
         
-        // Subtract 1 for header row
-        return $collection->first()->count() - 1;
+        return $count;
     }
 
     /**

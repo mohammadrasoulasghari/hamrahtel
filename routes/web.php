@@ -14,6 +14,7 @@ Route::post('/comparison/upload', [ComparisonController::class, 'upload'])->name
 Route::post('/preview-columns', [ComparisonController::class, 'previewColumns'])->name('preview.columns');
 Route::post('/validate-matching', [ComparisonController::class, 'validateMatching'])->name('validate.matching');
 Route::post('/start-comparison', [ComparisonController::class, 'startComparison'])->name('start.comparison');
+Route::get('/check-status/{id}', [ComparisonController::class, 'checkStatus'])->name('check.status');
 
 // Results
 Route::get('/comparison/result/{id}', [ComparisonController::class, 'result'])->name('comparison.result');

@@ -329,32 +329,53 @@
         }
 
         // File selection handlers
-        document.getElementById('file1').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                document.getElementById('file1-info').innerHTML = `
-                    <span class="text-green-600 font-semibold">${file.name}</span>
-                    <br><span class="text-xs">${(file.size / 1024).toFixed(2)} KB</span>
-                `;
-                checkFilesSelected();
+        function setupFileListeners() {
+            const file1 = document.getElementById('file1');
+            const file2 = document.getElementById('file2');
+            
+            if (!file1 || !file2) {
+                console.error('File inputs not found');
+                return;
             }
-        });
+            
+            file1.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                console.log('File 1 selected:', file);
+                if (file) {
+                    document.getElementById('file1-info').innerHTML = `
+                        <span class="text-green-600 font-semibold">${file.name}</span>
+                        <br><span class="text-xs">${(file.size / 1024).toFixed(2)} KB</span>
+                    `;
+                    checkFilesSelected();
+                }
+            });
 
-        document.getElementById('file2').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                document.getElementById('file2-info').innerHTML = `
-                    <span class="text-green-600 font-semibold">${file.name}</span>
-                    <br><span class="text-xs">${(file.size / 1024).toFixed(2)} KB</span>
-                `;
-                checkFilesSelected();
-            }
-        });
+            file2.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                console.log('File 2 selected:', file);
+                if (file) {
+                    document.getElementById('file2-info').innerHTML = `
+                        <span class="text-green-600 font-semibold">${file.name}</span>
+                        <br><span class="text-xs">${(file.size / 1024).toFixed(2)} KB</span>
+                    `;
+                    checkFilesSelected();
+                }
+            });
+        }
 
         function checkFilesSelected() {
             const file1 = document.getElementById('file1').files[0];
             const file2 = document.getElementById('file2').files[0];
-            document.getElementById('analyze-files').disabled = !(file1 && file2);
+            const analyzeBtn = document.getElementById('analyze-files');
+            console.log('Check files:', {file1, file2, disabled: !(file1 && file2)});
+            analyzeBtn.disabled = !(file1 && file2);
+        }
+
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupFileListeners);
+        } else {
+            setupFileListeners();
         }
 
         // Step 1: Analyze files
@@ -587,19 +608,17 @@
             
             let messageIndex = 0;
             const progressInterval = setInterval(() => {
-                progress += 5;
+                progress += 2;
+                if (progress > 95) progress = 95; // Stop at 95% until completed
                 progressBar.style.width = progress + '%';
                 
                 if (progress % 25 === 0 && messageIndex < messages.length) {
                     progressMessage.textContent = messages[messageIndex++];
                 }
-                
-                if (progress >= 100) {
-                    clearInterval(progressInterval);
-                }
-            }, 300);
+            }, 500);
 
             try {
+                // Start the job
                 const response = await fetch('/start-comparison', {
                     method: 'POST',
                     headers: {
@@ -616,9 +635,36 @@
 
                 const result = await response.json();
                 
-                if (result.success) {
-                    // Redirect to results
-                    window.location.href = result.redirect_url;
+                if (result.success && result.status === 'processing') {
+                    // Start polling for status
+                    const pollInterval = setInterval(async () => {
+                        try {
+                            const statusResponse = await fetch(`/check-status/${state.comparisonId}`);
+                            const statusData = await statusResponse.json();
+                            
+                            if (statusData.success) {
+                                if (statusData.status === 'completed') {
+                                    clearInterval(pollInterval);
+                                    clearInterval(progressInterval);
+                                    progress = 100;
+                                    progressBar.style.width = '100%';
+                                    progressMessage.textContent = 'تکمیل شد! در حال انتقال...';
+                                    
+                                    setTimeout(() => {
+                                        window.location.href = statusData.redirect_url;
+                                    }, 500);
+                                } else if (statusData.status === 'failed') {
+                                    clearInterval(pollInterval);
+                                    clearInterval(progressInterval);
+                                    alert('خطا در پردازش. لطفاً دوباره تلاش کنید.');
+                                    showStep(3);
+                                }
+                            }
+                        } catch (error) {
+                            console.error('خطا در بررسی وضعیت:', error);
+                        }
+                    }, 2000); // Check every 2 seconds
+                    
                 } else {
                     clearInterval(progressInterval);
                     alert('خطا: ' + result.message);
