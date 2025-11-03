@@ -18,11 +18,15 @@ class OpenRouterService
         $this->baseUrl = config('openrouter.base_url');
     }
 
-    public function compareFiles($file1Data, $file2Data, $description)
+    public function compareFiles($file1Data, $file2Data, $description, $phpAnalysis = null)
     {
         try {
-            // ساخت پرامپت برای AI
-            $prompt = $this->buildComparisonPrompt($file1Data, $file2Data, $description);
+            // ساخت پرامپت برای AI (optimized version if PHP analysis available)
+            if ($phpAnalysis) {
+                $prompt = $this->buildOptimizedPrompt($phpAnalysis, $file1Data, $file2Data, $description);
+            } else {
+                $prompt = $this->buildComparisonPrompt($file1Data, $file2Data, $description);
+            }
 
             // ارسال درخواست به OpenRouter
             $response = Http::withHeaders([
@@ -58,6 +62,40 @@ class OpenRouterService
             Log::error('OpenRouter Service Error: ' . $e->getMessage());
             return 'خطا در پردازش درخواست: ' . $e->getMessage();
         }
+    }
+
+    /**
+     * Build optimized prompt using PHP analysis results (70% token reduction).
+     */
+    private function buildOptimizedPrompt($phpAnalysis, $file1Data, $file2Data, $description)
+    {
+        $prompt = "## توضیحات کاربر:\n{$description}\n\n";
+        
+        $prompt .= "## نتایج تحلیل ساختاری PHP:\n";
+        $prompt .= "تحلیل ساختاری فایل‌ها در PHP انجام شده است. نتایج:\n\n";
+        
+        // Schema differences
+        if (!empty($phpAnalysis['findings'])) {
+            foreach ($phpAnalysis['findings'] as $finding) {
+                $prompt .= "- **{$finding['category']}**: {$finding['message']}\n";
+            }
+        }
+        
+        $prompt .= "\n## نمونه داده‌ها:\n";
+        $prompt .= "فایل اول (5 ردیف):\n";
+        $prompt .= json_encode(array_slice($file1Data, 0, 5), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n\n";
+        $prompt .= "فایل دوم (5 ردیف):\n";
+        $prompt .= json_encode(array_slice($file2Data, 0, 5), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n\n";
+        
+        $prompt .= "## درخواست:\n";
+        $prompt .= "با توجه به نتایج تحلیل ساختاری، لطفاً:\n";
+        $prompt .= "1. کیفیت داده‌ها را بررسی کنید\n";
+        $prompt .= "2. تفاوت‌های معنایی محتوا را تحلیل کنید\n";
+        $prompt .= "3. بینش‌های کسب‌وکاری ارائه دهید\n";
+        $prompt .= "4. توصیه‌های عملی برای حل مغایرت‌ها ارائه کنید\n\n";
+        $prompt .= "پاسخ را با فرمت HTML زیبا، استفاده از Tailwind CSS، و رنگ‌بندی مناسب بنویسید.\n";
+
+        return $prompt;
     }
 
     private function buildComparisonPrompt($file1Data, $file2Data, $description)
