@@ -10,13 +10,15 @@
 ## 📋 Executive Summary
 
 Your existing system has significant limitations:
-- ❌ **Memory failure** with files > 2000 rows
-- ❌ **No column discovery** - users must guess relationships
-- ❌ **Inefficient AI usage** - sending full files wastes tokens & money
-- ❌ **Poor UX** - no control over comparison strategy
-- ❌ **No progress feedback** - users don't know if it's working
+
+-   ❌ **Memory failure** with files > 2000 rows
+-   ❌ **No column discovery** - users must guess relationships
+-   ❌ **Inefficient AI usage** - sending full files wastes tokens & money
+-   ❌ **Poor UX** - no control over comparison strategy
+-   ❌ **No progress feedback** - users don't know if it's working
 
 **This proposal fixes ALL of these** through intelligent two-phase comparison:
+
 1. **Phase 1 (PHP)**: Smart schema discovery → row joining → structural analysis
 2. **Phase 2 (AI)**: Semantic validation → quality insights → actionable findings
 
@@ -27,6 +29,7 @@ Your existing system has significant limitations:
 ### User Experience Transformation
 
 **Before** (Current - Broken):
+
 ```
 User: Upload file1 (500 rows)
 User: Upload file2 (500 rows)
@@ -35,11 +38,12 @@ System: 💥 Crash (memory exhausted)
 ```
 
 **After** (Smart Column Matching):
+
 ```
 User: Upload file1 (5000 rows)
 User: Upload file2 (5000 rows)
 System: ✅ Detects columns (2s)
-UI: "کدام ستون‌ها برای تطابق استفاده شود؟" 
+UI: "کدام ستون‌ها برای تطابق استفاده شود؟"
      └─ "ID" (unique identifier)
      └─ "Email" (secondary match)
 User: Selects "ID" column
@@ -67,16 +71,16 @@ PROPOSED (Smart):
 
 ## 📊 Key Features
 
-| Feature | Impact | User Benefit |
-|---------|--------|---|
-| **Schema Discovery** | Detects columns without loading full file | No more guessing |
-| **Column Selection** | User picks which columns to compare | Full control |
-| **Row Joining** | Matches rows like SQL JOIN (by ID/key) | Compares apples-to-apples |
-| **PHP Analysis** | Detects all schema differences fast | Instant structural report |
-| **AI Optimization** | Sends only relevant data to AI | 70% cost reduction |
-| **Time Estimation** | Shows user estimated completion time | Sets expectations |
-| **Progress Display** | Real-time status updates | Keeps user informed |
-| **Large File Support** | Handles 5000+ rows (up from 500) | 10x capacity increase |
+| Feature                | Impact                                    | User Benefit              |
+| ---------------------- | ----------------------------------------- | ------------------------- |
+| **Schema Discovery**   | Detects columns without loading full file | No more guessing          |
+| **Column Selection**   | User picks which columns to compare       | Full control              |
+| **Row Joining**        | Matches rows like SQL JOIN (by ID/key)    | Compares apples-to-apples |
+| **PHP Analysis**       | Detects all schema differences fast       | Instant structural report |
+| **AI Optimization**    | Sends only relevant data to AI            | 70% cost reduction        |
+| **Time Estimation**    | Shows user estimated completion time      | Sets expectations         |
+| **Progress Display**   | Real-time status updates                  | Keeps user informed       |
+| **Large File Support** | Handles 5000+ rows (up from 500)          | 10x capacity increase     |
 
 ---
 
@@ -134,7 +138,7 @@ PHASE 6: DISPLAY RESULTS
 - getSampleRows($filePath, $limit) → first N rows
 - inferDataType($samples) → 'string'|'integer'|'date'|...
 
-// 2. RowJoiningService  
+// 2. RowJoiningService
 - joinByKeyColumns($data1, $data2, $keyColumns) → {matched, unmatched1, unmatched2}
 - extractColumns($data, $columnNames) → filtered data
 - matchRows($row1, $data2, $keyColumns) → matched row or null
@@ -153,49 +157,54 @@ PHASE 6: DISPLAY RESULTS
 
 ## 📈 Performance Improvements
 
-| Metric | Before | After | Improvement |
-|--------|--------|-------|---|
-| **Max file rows** | 500 | 5000 | 10x larger |
-| **Memory per comparison** | 500+ MB (crash) | 10 MB | 50x less |
-| **API tokens per comparison** | 4000 | 1000 | 75% savings |
-| **Time to result** | Crash | 25s | Works! |
-| **User control** | None | Full | New feature |
-| **Cost per comparison** | $0.15+ | $0.04 | 70% cheaper |
+| Metric                        | Before          | After | Improvement |
+| ----------------------------- | --------------- | ----- | ----------- |
+| **Max file rows**             | 500             | 5000  | 10x larger  |
+| **Memory per comparison**     | 500+ MB (crash) | 10 MB | 50x less    |
+| **API tokens per comparison** | 4000            | 1000  | 75% savings |
+| **Time to result**            | Crash           | 25s   | Works!      |
+| **User control**              | None            | Full  | New feature |
+| **Cost per comparison**       | $0.15+          | $0.04 | 70% cheaper |
 
 ---
 
 ## 🚀 Implementation Roadmap
 
 ### Phase A: Foundation (4 days)
-- [ ] ColumnDetectionService (schema detection)
-- [ ] Database migration (add metadata columns)
-- [ ] Configuration setup
-- [ ] **Deliverable**: Can detect file schemas without loading
+
+-   [ ] ColumnDetectionService (schema detection)
+-   [ ] Database migration (add metadata columns)
+-   [ ] Configuration setup
+-   [ ] **Deliverable**: Can detect file schemas without loading
 
 ### Phase B: Matching Logic (3 days)
-- [ ] RowJoiningService (row matching)
-- [ ] ComparisonAnalyzer (structural analysis)
-- [ ] Validation endpoints
-- [ ] **Deliverable**: Can join and analyze rows efficiently
+
+-   [ ] RowJoiningService (row matching)
+-   [ ] ComparisonAnalyzer (structural analysis)
+-   [ ] Validation endpoints
+-   [ ] **Deliverable**: Can join and analyze rows efficiently
 
 ### Phase C: User Interface (3 days)
-- [ ] Column selector UI component
-- [ ] Preview display
-- [ ] Modified upload flow
-- [ ] **Deliverable**: User can select matching strategy
+
+-   [ ] Column selector UI component
+-   [ ] Preview display
+-   [ ] Modified upload flow
+-   [ ] **Deliverable**: User can select matching strategy
 
 ### Phase D: Integration (2 days)
-- [ ] AI service optimization
-- [ ] Progress tracking
-- [ ] Time estimation
-- [ ] **Deliverable**: End-to-end working pipeline
+
+-   [ ] AI service optimization
+-   [ ] Progress tracking
+-   [ ] Time estimation
+-   [ ] **Deliverable**: End-to-end working pipeline
 
 ### Phase E: Testing & Polish (3 days)
-- [ ] Unit tests for all services
-- [ ] Integration tests
-- [ ] Performance validation
-- [ ] Error handling
-- [ ] **Deliverable**: Production-ready code
+
+-   [ ] Unit tests for all services
+-   [ ] Integration tests
+-   [ ] Performance validation
+-   [ ] Error handling
+-   [ ] **Deliverable**: Production-ready code
 
 **Total Effort**: ~40-50 hours (1-2 developers, 1 week)
 
@@ -206,68 +215,75 @@ PHASE 6: DISPLAY RESULTS
 ### New Step-by-Step Flow
 
 1. **Upload Files** (unchanged)
-   - Select File 1
-   - Select File 2
-   - Click "شروع"
+
+    - Select File 1
+    - Select File 2
+    - Click "شروع"
 
 2. **Schema Discovery** (NEW - automatic)
-   ```
-   Detecting columns...
-   ✅ File 1: [ID, Name, Email, Phone] (1000 rows)
-   ✅ File 2: [ln, FullName, EmailAddr, Tel] (950 rows)
-   Ready for configuration!
-   ```
+
+    ```
+    Detecting columns...
+    ✅ File 1: [ID, Name, Email, Phone] (1000 rows)
+    ✅ File 2: [ln, FullName, EmailAddr, Tel] (950 rows)
+    Ready for configuration!
+    ```
 
 3. **Select Matching Strategy** (NEW - user choice)
-   ```
-   چگونه می‌خواهید ردیف‌ها را تطابق دهید؟
-   
-   ☆ تطابق با ستون کلید (مثلاً: ID)
-   ◯ مقایسه ترتیبی (ردیف 1 ↔ ردیف 1)
-   ◯ فقط ستون‌های خاص
-   ```
-   User: Selects "تطابق با ستون کلید" → Picks "ID"
+
+    ```
+    چگونه می‌خواهید ردیف‌ها را تطابق دهید؟
+
+    ☆ تطابق با ستون کلید (مثلاً: ID)
+    ◯ مقایسه ترتیبی (ردیف 1 ↔ ردیف 1)
+    ◯ فقط ستون‌های خاص
+    ```
+
+    User: Selects "تطابق با ستون کلید" → Picks "ID"
 
 4. **Preview Results** (NEW - see before processing)
-   ```
-   ✅ تطابق‌ها: 950
-   ⚠️  تنها در فایل 1: 50 ردیف
-   ⏱️  زمان تخمینی: 25 ثانیه
-   
-   [مثال‌های تطابق‌شده]
-   ID=1: File1(Alice) ↔ File2(Alice)
-   ID=2: File1(Bob) ↔ File2(Robert)  [نام متفاوت!]
-   
-   [تایید]  [بازگشت]
-   ```
+
+    ```
+    ✅ تطابق‌ها: 950
+    ⚠️  تنها در فایل 1: 50 ردیف
+    ⏱️  زمان تخمینی: 25 ثانیه
+
+    [مثال‌های تطابق‌شده]
+    ID=1: File1(Alice) ↔ File2(Alice)
+    ID=2: File1(Bob) ↔ File2(Robert)  [نام متفاوت!]
+
+    [تایید]  [بازگشت]
+    ```
 
 5. **Processing with Progress** (NEW - visual feedback)
-   ```
-   ▓▓░░░░░░░░ 30%
-   
-   ✅ Schema detection (2s)
-   ✅ Row joining (3s)
-   🔄 Structural analysis (in progress)
-   ⏳ AI processing (estimated 15s)
-   
-   Remaining: ~10 seconds
-   ```
+
+    ```
+    ▓▓░░░░░░░░ 30%
+
+    ✅ Schema detection (2s)
+    ✅ Row joining (3s)
+    🔄 Structural analysis (in progress)
+    ⏳ AI processing (estimated 15s)
+
+    Remaining: ~10 seconds
+    ```
 
 6. **Results Display** (IMPROVED)
-   ```
-   [PHP Findings]
-   ├─ Schema: 2 column differences
-   ├─ Rows: 950 matched, 50 unmatched
-   └─ Data: 120 value differences found
-   
-   [AI Insights]
-   ├─ Data Quality: Fair (85%)
-   ├─ Issues: Name format inconsistency
-   └─ Recommendation: Standardize name format
-   
-   [Detailed Report]
-   Download | Share | Print
-   ```
+
+    ```
+    [PHP Findings]
+    ├─ Schema: 2 column differences
+    ├─ Rows: 950 matched, 50 unmatched
+    └─ Data: 120 value differences found
+
+    [AI Insights]
+    ├─ Data Quality: Fair (85%)
+    ├─ Issues: Name format inconsistency
+    └─ Recommendation: Standardize name format
+
+    [Detailed Report]
+    Download | Share | Print
+    ```
 
 ---
 
@@ -275,40 +291,43 @@ PHASE 6: DISPLAY RESULTS
 
 ### What Gets Tested
 
-- ✅ Schema detection accuracy (various Excel formats)
-- ✅ Row joining correctness (simple & composite keys)
-- ✅ Memory efficiency (5000-row file handling)
-- ✅ Time estimation accuracy (within ±20%)
-- ✅ Error handling (malformed files, missing columns)
-- ✅ UI responsiveness (all browsers)
-- ✅ RTL layout (Persian text alignment)
+-   ✅ Schema detection accuracy (various Excel formats)
+-   ✅ Row joining correctness (simple & composite keys)
+-   ✅ Memory efficiency (5000-row file handling)
+-   ✅ Time estimation accuracy (within ±20%)
+-   ✅ Error handling (malformed files, missing columns)
+-   ✅ UI responsiveness (all browsers)
+-   ✅ RTL layout (Persian text alignment)
 
 ### Test Coverage Target
 
-- Unit tests: 80%+ of services
-- Integration tests: Full pipeline (upload → result)
-- Performance tests: 5000-row file completes in <40s
-- Edge cases: Empty files, special characters, large files
+-   Unit tests: 80%+ of services
+-   Integration tests: Full pipeline (upload → result)
+-   Performance tests: 5000-row file completes in <40s
+-   Edge cases: Empty files, special characters, large files
 
 ---
 
 ## 💰 Business Impact
 
 ### Cost Savings
-- **API cost reduction**: 70% fewer tokens used per comparison
-- **Faster processing**: Better user experience, fewer retries
-- **Scalability**: Handle 10x larger files without infrastructure upgrade
+
+-   **API cost reduction**: 70% fewer tokens used per comparison
+-   **Faster processing**: Better user experience, fewer retries
+-   **Scalability**: Handle 10x larger files without infrastructure upgrade
 
 ### User Experience
-- **Self-service**: Users control comparison logic
-- **Transparency**: See what's being compared before processing
-- **Confidence**: Time estimates + progress display
-- **Reliability**: Works with large files, no crashes
+
+-   **Self-service**: Users control comparison logic
+-   **Transparency**: See what's being compared before processing
+-   **Confidence**: Time estimates + progress display
+-   **Reliability**: Works with large files, no crashes
 
 ### Competitive Advantage
-- First Persian file comparison system with smart joining
-- Transparent two-phase analysis (structural + semantic)
-- Professional UX for non-technical users
+
+-   First Persian file comparison system with smart joining
+-   Transparent two-phase analysis (structural + semantic)
+-   Professional UX for non-technical users
 
 ---
 
@@ -338,18 +357,21 @@ openspec/changes/add-smart-column-matching/
 ## ✅ Next Steps
 
 ### For Review
+
 1. **Read** this proposal end-to-end
 2. **Review** `design.md` for architecture decisions
 3. **Check** all spec deltas in `/specs/*/spec.md`
 4. **Validate** tasks.md for completeness
 
 ### For Approval
-- [ ] Architecture approved?
-- [ ] User workflow makes sense?
-- [ ] Effort estimate acceptable?
-- [ ] Resource availability?
+
+-   [ ] Architecture approved?
+-   [ ] User workflow makes sense?
+-   [ ] Effort estimate acceptable?
+-   [ ] Resource availability?
 
 ### For Implementation (Post-Approval)
+
 1. Follow Phase A → B → C → D → E in order
 2. Update tasks.md as you complete each section
 3. Refer to design.md for architectural guidance
@@ -383,18 +405,19 @@ A: Old API endpoints still work. New endpoints added. Users can upgrade graduall
 ✅ Persian text included in examples  
 ✅ Technical accuracy verified  
 ✅ Cross-capability references included  
-✅ No ambiguous requirements  
+✅ No ambiguous requirements
 
 ---
 
 ## 🎉 Summary
 
 This proposal transforms your system from a brittle, limited tool into a robust, scalable platform that:
-- ✅ Handles files 10x larger
-- ✅ Gives users full control
-- ✅ Reduces costs by 70%
-- ✅ Provides transparent workflows
-- ✅ Scales to enterprise use
+
+-   ✅ Handles files 10x larger
+-   ✅ Gives users full control
+-   ✅ Reduces costs by 70%
+-   ✅ Provides transparent workflows
+-   ✅ Scales to enterprise use
 
 **Ready to build this?** → Approve proposal → Start Phase A
 
@@ -403,4 +426,3 @@ This proposal transforms your system from a brittle, limited tool into a robust,
 **Proposal Status**: ✅ READY FOR REVIEW & APPROVAL
 
 📧 Questions? Review the attached files or ask for clarification.
-

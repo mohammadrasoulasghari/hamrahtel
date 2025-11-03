@@ -3,10 +3,11 @@
 ## Context
 
 Current system loads entire files into memory and sends all data to AI, causing:
-- Memory exhaustion (5000+ rows fails)
-- Inefficient token usage (paying for schema info AI doesn't need)
-- Poor UX (users must guess column relationships)
-- Inaccurate results (AI can't analyze incomplete samples)
+
+-   Memory exhaustion (5000+ rows fails)
+-   Inefficient token usage (paying for schema info AI doesn't need)
+-   Poor UX (users must guess column relationships)
+-   Inaccurate results (AI can't analyze incomplete samples)
 
 New system separates concerns: PHP handles structure, AI handles semantics.
 
@@ -115,10 +116,10 @@ New system separates concerns: PHP handles structure, AI handles semantics.
 class ColumnDetectionService {
     public function detectColumns($filePath) : array
     // Returns: ['columns' => [...], 'row_count' => X, 'data_types' => [...]]
-    
+
     public function getSampleRows($filePath, $limit = 5) : array
     // Returns: First N rows for preview
-    
+
     public function inferDataType($samples) : string
     // Returns: 'string' | 'integer' | 'decimal' | 'date' | 'boolean'
 }
@@ -135,10 +136,10 @@ class RowJoiningService {
     //   'unmatched_file1' => [...],
     //   'unmatched_file2' => [...]
     // }
-    
+
     public function extractColumns($data, $columnNames) : array
     // Returns: Filtered data with only specified columns
-    
+
     public function matchRows($file1Row, $file2Data, $keyColumns) : ?array
     // Returns: Matching row from file2, or null
 }
@@ -156,10 +157,10 @@ class ComparisonAnalyzer {
     //   'type_mismatches' => [...],
     //   'missing_patterns' => [...]
     // }
-    
+
     public function analyzeMatchedRows($pairs) : array
     // Returns: Row-level difference details
-    
+
     public function generateReport($analysis) : string
     // Returns: Categorized, structured findings
 }
@@ -229,7 +230,7 @@ ALTER TABLE comparisons ADD COLUMN processing_duration_seconds INT;
 ```
 POST /api/preview-columns
 Input: { file1: File, file2: File }
-Output: { 
+Output: {
   file1: { columns: [...], row_count: N, types: {...} },
   file2: { columns: [...], row_count: N, types: {...} }
 }
@@ -273,9 +274,9 @@ Output: {
 1. **Upload**: User uploads two files (unchanged)
 2. **Preview**: System detects columns, shows schema
 3. **Select Strategy**:
-   - "Join by key column" → user picks column(s)
-   - "Compare all rows" → system matches 1:1
-   - "Filter columns" → user picks columns to compare
+    - "Join by key column" → user picks column(s)
+    - "Compare all rows" → system matches 1:1
+    - "Filter columns" → user picks columns to compare
 4. **Preview Results**: Show matched row count + sample pairs
 5. **Confirm**: User confirms before processing
 6. **Progress**: Show progress bar with time estimate
@@ -301,35 +302,34 @@ return [
 
 ## Performance Targets
 
-| Operation | Time | Memory |
-|-----------|------|--------|
-| Schema detection | 1-2s | ~20 KB |
-| Row joining (5000 rows) | 2-3s | 1-2 MB |
-| PHP analysis | 1-3s | ~5 MB |
-| AI processing | 10-30s | API |
-| **Total** | **15-40s** | **~10 MB** |
+| Operation               | Time       | Memory     |
+| ----------------------- | ---------- | ---------- |
+| Schema detection        | 1-2s       | ~20 KB     |
+| Row joining (5000 rows) | 2-3s       | 1-2 MB     |
+| PHP analysis            | 1-3s       | ~5 MB      |
+| AI processing           | 10-30s     | API        |
+| **Total**               | **15-40s** | **~10 MB** |
 
 ---
 
 ## Error Handling
 
-| Scenario | Handling |
-|----------|----------|
-| File > 50MB | Show error, suggest sampling |
-| No matching rows | Warn user, suggest review column selection |
-| Column mismatch | Auto-suggest similar names |
-| AI timeout | Show partial PHP results |
-| Memory exceeded | Stop, show partial results |
-| Invalid key column | Validate before joining, show error |
+| Scenario           | Handling                                   |
+| ------------------ | ------------------------------------------ |
+| File > 50MB        | Show error, suggest sampling               |
+| No matching rows   | Warn user, suggest review column selection |
+| Column mismatch    | Auto-suggest similar names                 |
+| AI timeout         | Show partial PHP results                   |
+| Memory exceeded    | Stop, show partial results                 |
+| Invalid key column | Validate before joining, show error        |
 
 ---
 
 ## Future Enhancements (Phase 2)
 
-- [ ] Real-time progress via WebSocket/SSE
-- [ ] Batch processing (compare 10+ files)
-- [ ] Custom comparison rules (user-defined logic)
-- [ ] Report generation (PDF export)
-- [ ] Scheduled comparisons (recurring)
-- [ ] Diff visualization (interactive highlight)
-
+-   [ ] Real-time progress via WebSocket/SSE
+-   [ ] Batch processing (compare 10+ files)
+-   [ ] Custom comparison rules (user-defined logic)
+-   [ ] Report generation (PDF export)
+-   [ ] Scheduled comparisons (recurring)
+-   [ ] Diff visualization (interactive highlight)
