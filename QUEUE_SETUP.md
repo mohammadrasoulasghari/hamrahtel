@@ -1,9 +1,11 @@
 # راه‌اندازی Queue برای پردازش فایل‌های بزرگ
 
 ## مشکل قبلی
+
 هنگام آپلود فایل‌های بزرگ (بیش از 5000 ردیف)، خطای **Allowed memory size exhausted** رخ می‌داد چون تمام فایل در memory بارگذاری می‌شد.
 
 ## راه‌حل
+
 1. **پردازش Chunk-based**: فایل‌ها به صورت تکه‌تکه (500 ردیف) خوانده می‌شوند
 2. **Queue System**: پردازش سنگین به صورت async در background انجام می‌شود
 3. **Polling**: رابط کاربری هر 2 ثانیه وضعیت را چک می‌کند
@@ -19,8 +21,9 @@ php artisan queue:work --tries=1 --timeout=600
 ```
 
 **توضیحات پارامترها:**
-- `--tries=1`: اگر job شکست خورد، دوباره تلاش نکن
-- `--timeout=600`: حداکثر 10 دقیقه برای هر job
+
+-   `--tries=1`: اگر job شکست خورد، دوباره تلاش نکن
+-   `--timeout=600`: حداکثر 10 دقیقه برای هر job
 
 ### 2. اجرای Laravel Server
 
@@ -77,15 +80,17 @@ stopwaitsecs=3600
 ## نکات مهم
 
 ### حافظه
-- تنظیمات PHP:
-  - `memory_limit = 512M`
-  - `upload_max_filesize = 50M`
-  - `post_max_size = 50M`
-  - `max_execution_time = 300`
+
+-   تنظیمات PHP:
+    -   `memory_limit = 512M`
+    -   `upload_max_filesize = 50M`
+    -   `post_max_size = 50M`
+    -   `max_execution_time = 300`
 
 این تنظیمات در `ComparisonController` به صورت خودکار با `ini_set()` اعمال می‌شوند.
 
 ### لاگ‌ها
+
 اگر مشکلی پیش آمد، لاگ‌ها را بررسی کنید:
 
 ```bash
@@ -116,24 +121,27 @@ php artisan queue:restart
 
 ### جداول دیتابیس:
 
-- `comparisons.status`: pending | processing | completed | failed
-- `jobs`: لیست job‌های در صف
-- `failed_jobs`: job‌های شکست خورده
+-   `comparisons.status`: pending | processing | completed | failed
+-   `jobs`: لیست job‌های در صف
+-   `failed_jobs`: job‌های شکست خورده
 
 ## عیب‌یابی
 
 ### خطا: "No such file or directory"
-- مطمئن شوید `storage/app/public` وجود دارد
-- دستور `php artisan storage:link` را اجرا کنید
+
+-   مطمئن شوید `storage/app/public` وجود دارد
+-   دستور `php artisan storage:link` را اجرا کنید
 
 ### خطا: "Queue connection database not found"
-- مطمئن شوید migration `jobs` اجرا شده است
-- دستور `php artisan migrate` را اجرا کنید
+
+-   مطمئن شوید migration `jobs` اجرا شده است
+-   دستور `php artisan migrate` را اجرا کنید
 
 ### Job هیچ وقت تمام نمیشه
-- لاگ Laravel را چک کنید
-- مطمئن شوید worker در حال اجراست (`ps aux | grep queue:work`)
-- timeout را افزایش دهید
+
+-   لاگ Laravel را چک کنید
+-   مطمئن شوید worker در حال اجراست (`ps aux | grep queue:work`)
+-   timeout را افزایش دهید
 
 ---
 

@@ -315,7 +315,7 @@ class ComparisonController extends Controller
 
     /**
      * Load only sample rows from file to avoid memory exhaustion.
-     * Uses chunked reading to avoid loading entire file.
+     * Uses PhpSpreadsheet to read limited rows.
      *
      * @param string $filePath
      * @param int $limit
@@ -323,65 +323,84 @@ class ComparisonController extends Controller
      */
     private function loadSampleRows(string $filePath, int $limit = 100): array
     {
-        $rows = [];
-        $headers = null;
-        $collected = 0;
-        
-        Excel::chunk($filePath, 100, function($chunkRows) use (&$rows, &$headers, &$collected, $limit) {
-            foreach ($chunkRows as $index => $row) {
-                $rowArray = is_array($row) ? $row : $row->toArray();
+        try {
+            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
+            $reader->setReadDataOnly(true);
+            
+            $spreadsheet = $reader->load($filePath);
+            $sheet = $spreadsheet->getActiveSheet();
+            
+            // Get headers (first row)
+            $headers = $sheet->rangeToArray('A1:' . $sheet->getHighestColumn() . '1')[0];
+            
+            // Get sample data rows
+            $rows = [];
+            $maxRow = min($sheet->getHighestRow(), $limit + 1);
+            
+            for ($row = 2; $row <= $maxRow; $row++) {
+                $rowData = $sheet->rangeToArray(
+                    'A' . $row . ':' . $sheet->getHighestColumn() . $row
+                )[0];
                 
-                // First row overall is headers
-                if ($headers === null) {
-                    $headers = array_values($rowArray);
-                    continue;
-                }
-                
-                if ($collected >= $limit) {
-                    return false; // Stop reading
-                }
-                
-                // Map row to headers
+                // Map to headers
                 $mappedRow = [];
                 foreach ($headers as $idx => $header) {
-                    $mappedRow[$header] = $rowArray[$idx] ?? null;
+                    $mappedRow[$header] = $rowData[$idx] ?? null;
                 }
                 $rows[] = $mappedRow;
-                $collected++;
             }
-        });
-        
-        return $rows;
+            
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
+            
+            return $rows;
+        } catch (\Exception $e) {
+            Log::error('Error loading sample rows: ' . $e->getMessage());
+            return [];
+        }
     }
 
     /**
      * Convert Excel file to JSON array (DEPRECATED - use Job for large files).
-     * Uses chunked reading for memory safety.
+     * Uses PhpSpreadsheet chunked reading for memory safety.
      * 
      * @deprecated Use ProcessFileComparison job instead for production
      */
     private function convertToJson($filePath)
     {
         try {
-            $data = [];
-            $headers = null;
+            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
+            $reader->setReadDataOnly(true);
             
-            Excel::chunk($filePath, 500, function($rows) use (&$data, &$headers) {
-                foreach ($rows as $row) {
-                    $rowArray = is_array($row) ? $row : $row->toArray();
-                    
-                    if ($headers === null) {
-                        $headers = $rowArray;
-                        continue;
-                    }
-                    
+            $spreadsheet = $reader->load($filePath);
+            $sheet = $spreadsheet->getActiveSheet();
+            
+            // Get headers
+            $headers = $sheet->rangeToArray('A1:' . $sheet->getHighestColumn() . '1')[0];
+            
+            // Get all data rows
+            $data = [];
+            $highestRow = $sheet->getHighestRow();
+            $chunkSize = 500;
+            
+            for ($startRow = 2; $startRow <= $highestRow; $startRow += $chunkSize) {
+                $endRow = min($startRow + $chunkSize - 1, $highestRow);
+                
+                $chunkData = $sheet->rangeToArray(
+                    'A' . $startRow . ':' . $sheet->getHighestColumn() . $endRow
+                );
+                
+                foreach ($chunkData as $row) {
                     $rowData = [];
                     foreach ($headers as $index => $header) {
-                        $rowData[$header] = $rowArray[$index] ?? null;
+                        $rowData[$header] = $row[$index] ?? null;
                     }
                     $data[] = $rowData;
                 }
-            });
+            }
+            
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
             
             return $data;
             

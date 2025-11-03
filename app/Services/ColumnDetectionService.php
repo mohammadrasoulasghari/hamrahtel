@@ -44,7 +44,7 @@ class ColumnDetectionService
     /**
      * Extract column names from the file header.
      * Handles numeric column names (0, 1, 2...) by using first row as headers.
-     * Uses chunk reading to avoid memory exhaustion.
+     * Reads only first row to avoid memory exhaustion.
      *
      * @param string $filePath
      * @return array
@@ -52,41 +52,40 @@ class ColumnDetectionService
     protected function extractColumnNames(string $filePath): array
     {
         try {
-            $firstRow = null;
+            // Read only first sheet, first row
+            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
+            $reader->setReadDataOnly(true);
             
-            // Read only first chunk (1 row) using callback to avoid loading entire file
-            Excel::chunk($filePath, 1, function($rows) use (&$firstRow) {
-                $firstRow = $rows->first();
-                return false; // Stop after first chunk
-            });
+            // Load only first row
+            $spreadsheet = $reader->load($filePath);
+            $sheet = $spreadsheet->getActiveSheet();
+            $firstRow = $sheet->rangeToArray('A1:' . $sheet->getHighestColumn() . '1')[0];
             
-            if (!$firstRow) {
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
+            
+            if (empty($firstRow)) {
                 return [];
             }
             
-            // Convert first row to array
-            $firstRowArray = is_array($firstRow) ? $firstRow : $firstRow->toArray();
-            
             // Check if headers are numeric (0, 1, 2...) which means no header row
             $hasNumericHeaders = false;
-            if (!empty($firstRowArray)) {
-                $keys = array_keys($firstRowArray);
-                $hasNumericHeaders = is_numeric($keys[0]);
+            if (isset($firstRow[0]) && is_numeric($firstRow[0])) {
+                $hasNumericHeaders = true;
             }
             
-            // If headers are numeric, use first row values as column names
-            if ($hasNumericHeaders && !empty($firstRowArray)) {
+            // If we have actual text headers, use them
+            if (!$hasNumericHeaders) {
                 $columnNames = [];
-                foreach ($firstRowArray as $value) {
-                    // Clean and use the value as column name
+                foreach ($firstRow as $value) {
                     $cleanName = $this->cleanColumnName($value);
                     $columnNames[] = $cleanName ?: 'ستون_' . (count($columnNames) + 1);
                 }
                 return $columnNames;
             }
             
-            // Otherwise use the keys (default Laravel Excel behavior)
-            return array_keys($firstRowArray);
+            // Otherwise use generic column names
+            return array_map(fn($i) => 'ستون_' . ($i + 1), array_keys($firstRow));
             
         } catch (\Exception $e) {
             Log::error('Error extracting column names: ' . $e->getMessage());
@@ -119,7 +118,7 @@ class ColumnDetectionService
 
     /**
      * Get sample rows from the file (lightweight read).
-     * Uses chunked reading to avoid loading entire file.
+     * Reads only limited rows to avoid loading entire file.
      *
      * @param string $filePath
      * @param int $limit Number of rows to return
@@ -127,46 +126,60 @@ class ColumnDetectionService
      */
     public function getSampleRows(string $filePath, int $limit = 5): array
     {
-        $rows = [];
-        $collected = 0;
-        
-        // Read in chunks, skip header (first row)
-        Excel::chunk($filePath, 100, function($chunkRows) use (&$rows, &$collected, $limit) {
-            foreach ($chunkRows as $index => $row) {
-                // Skip first row (header) in first chunk
-                if ($collected === 0 && $index === 0) {
-                    continue;
-                }
-                
-                if ($collected >= $limit) {
-                    return false; // Stop reading
-                }
-                
-                $rows[] = is_array($row) ? $row : $row->toArray();
-                $collected++;
+        try {
+            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
+            $reader->setReadDataOnly(true);
+            
+            $spreadsheet = $reader->load($filePath);
+            $sheet = $spreadsheet->getActiveSheet();
+            
+            // Read limited rows (skip header row)
+            $rows = [];
+            $maxRow = min($sheet->getHighestRow(), $limit + 1);
+            
+            for ($row = 2; $row <= $maxRow; $row++) {
+                $rowData = $sheet->rangeToArray(
+                    'A' . $row . ':' . $sheet->getHighestColumn() . $row
+                )[0];
+                $rows[] = $rowData;
             }
-        });
-        
-        return $rows;
+            
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
+            
+            return $rows;
+        } catch (\Exception $e) {
+            Log::error('Error getting sample rows: ' . $e->getMessage());
+            return [];
+        }
     }
 
     /**
      * Estimate row count without loading entire file.
-     * Uses chunked iteration to count rows efficiently.
+     * Uses sheet metadata to get count efficiently.
      *
      * @param string $filePath
      * @return int
      */
     public function estimateRowCount(string $filePath): int
     {
-        $count = 0;
-        
-        Excel::chunk($filePath, 1000, function($rows) use (&$count) {
-            $count += $rows->count();
-        });
-        
-        // Subtract 1 for header row
-        return max(0, $count - 1);
+        try {
+            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
+            $reader->setReadDataOnly(true);
+            
+            $spreadsheet = $reader->load($filePath);
+            $sheet = $spreadsheet->getActiveSheet();
+            
+            $rowCount = $sheet->getHighestRow() - 1; // Subtract header row
+            
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
+            
+            return max(0, $rowCount);
+        } catch (\Exception $e) {
+            Log::error('Error estimating row count: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     /**

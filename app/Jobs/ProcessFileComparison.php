@@ -134,7 +134,7 @@ class ProcessFileComparison implements ShouldQueue
 
     /**
      * Load Excel file in chunks to avoid memory exhaustion.
-     * Uses true chunked reading without loading entire file.
+     * Uses PhpSpreadsheet chunk reading without loading entire file.
      *
      * @param string $filePath
      * @return array
@@ -143,23 +143,46 @@ class ProcessFileComparison implements ShouldQueue
     {
         $data = [];
         $chunkSize = config('comparison.chunk_size', 500);
-        $isFirstChunk = true;
         
-        Excel::chunk($filePath, $chunkSize, function($rows) use (&$data, &$isFirstChunk) {
-            foreach ($rows as $index => $row) {
-                // Skip header row (first row of first chunk)
-                if ($isFirstChunk && $index === 0) {
-                    $isFirstChunk = false;
-                    continue;
+        try {
+            $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
+            $reader->setReadDataOnly(true);
+            $reader->setReadEmptyCells(false);
+            
+            $spreadsheet = $reader->load($filePath);
+            $sheet = $spreadsheet->getActiveSheet();
+            $highestRow = $sheet->getHighestRow();
+            $highestColumn = $sheet->getHighestColumn();
+            
+            // Process in chunks
+            for ($startRow = 2; $startRow <= $highestRow; $startRow += $chunkSize) {
+                $endRow = min($startRow + $chunkSize - 1, $highestRow);
+                
+                $chunkData = $sheet->rangeToArray(
+                    'A' . $startRow . ':' . $highestColumn . $endRow,
+                    null,
+                    true,
+                    true,
+                    false
+                );
+                
+                foreach ($chunkData as $row) {
+                    $data[] = $row;
                 }
                 
-                $data[] = is_array($row) ? $row : $row->toArray();
+                // Free memory periodically
+                if (count($data) % 1000 === 0) {
+                    gc_collect_cycles();
+                }
             }
             
-            if ($isFirstChunk) {
-                $isFirstChunk = false;
-            }
-        });
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
+            
+        } catch (\Exception $e) {
+            Log::error('Error loading file in chunks: ' . $e->getMessage());
+            throw $e;
+        }
         
         return $data;
     }
